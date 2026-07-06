@@ -2,6 +2,7 @@ _tools/
 _marketing/
 _build/
 node_modules/
+assets/gen/
 index_gm.html
 ol_build.py
 *.zip

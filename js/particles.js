@@ -27,6 +27,16 @@ class ParticleSystem {
     }
   }
 
+  // gerichteter, additiv leuchtender Funke (Warp-Burst / Capture / Crash)
+  spark(x, y, dx, dy, speed, color, { spread = 0.3, size = 3, life = 0.5 } = {}) {
+    const base = Math.atan2(dy, dx) + (Math.random() * 2 - 1) * spread;
+    const sp = speed * (0.7 + Math.random() * 0.5);
+    this.parts.push({
+      x, y, vx: Math.cos(base) * sp, vy: Math.sin(base) * sp,
+      r: size * (0.6 + Math.random() * 0.7), life, t: 0, color, gravity: 0, glow: true, add: true,
+    });
+  }
+
   // expandierender Ring (Shockwave)
   ring(x, y, color, { radius = 90, width = 5, life = 0.45 } = {}) {
     this.rings.push({ x, y, color, radius, width, life, t: 0 });
@@ -87,8 +97,8 @@ class ParticleSystem {
       ? (x, y) => [(x - off.x) * off.scale + off.cx, (y - off.y) * off.scale + off.cy]
       : (x, y) => [x, y];
     const S = off ? off.scale : 1;
-    // Partikel
-    for (const p of this.parts) {
+    // Partikel — erst normale, dann additive Funken (glow)
+    const drawPart = (p) => {
       const k = 1 - p.t / p.life;
       const [sx, sy] = T(p.x, p.y);
       c.globalAlpha = k;
@@ -98,7 +108,11 @@ class ParticleSystem {
       c.arc(sx, sy, Math.max(0.5, p.r * k * S), 0, TAU);
       c.fill();
       c.shadowBlur = 0;
-    }
+    };
+    for (const p of this.parts) if (!p.add) drawPart(p);
+    c.globalCompositeOperation = 'lighter';
+    for (const p of this.parts) if (p.add) drawPart(p);
+    c.globalCompositeOperation = 'source-over';
     // Ringe
     for (const r of this.rings) {
       const k = r.t / r.life;

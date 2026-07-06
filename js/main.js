@@ -6,6 +6,25 @@
   const ctx = canvas.getContext('2d');
   let dpr = 1, cw = 0, ch = 0;
 
+  // Bloom-Offscreens (halbe/viertel Auflösung → billiger Blur via Down-/Upscale)
+  const bloomA = document.createElement('canvas'), bcA = bloomA.getContext('2d');
+  const bloomB = document.createElement('canvas'), bcB = bloomB.getContext('2d');
+  const BLOOM = 0.44; // Stärke des additiven Glows
+  function applyBloom() {
+    const aw = bloomA.width, ah = bloomA.height;
+    if (aw < 2 || ah < 2) return;
+    bcA.clearRect(0, 0, aw, ah);
+    bcA.drawImage(canvas, 0, 0, aw, ah);
+    bcB.clearRect(0, 0, bloomB.width, bloomB.height);
+    bcB.drawImage(bloomA, 0, 0, bloomB.width, bloomB.height);
+    bcA.drawImage(bloomB, 0, 0, aw, ah); // weichgezeichnet zurück
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = BLOOM;
+    ctx.drawImage(bloomA, 0, 0, canvas.width, canvas.height);
+    ctx.restore();
+  }
+
   let state = 'menu';   // menu | levelselect | play | paused | end
   let mode = 'endless'; // endless | level | duel
   let boards = [];
@@ -31,6 +50,8 @@
     cw = window.innerWidth; ch = window.innerHeight;
     canvas.width = cw * dpr; canvas.height = ch * dpr;
     canvas.style.width = cw + 'px'; canvas.style.height = ch + 'px';
+    bloomA.width = Math.max(2, canvas.width >> 1); bloomA.height = Math.max(2, canvas.height >> 1);
+    bloomB.width = Math.max(2, canvas.width >> 2); bloomB.height = Math.max(2, canvas.height >> 2);
   }
   window.addEventListener('resize', resize);
   resize();
@@ -271,6 +292,7 @@
       }
     }
     ctx.restore();
+    applyBloom();
   }
 
   Ads.init();
