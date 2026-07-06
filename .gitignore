@@ -8,3 +8,4 @@ ol_build.py
 *.zip
 *.log
 .DS_Store
+docs/
