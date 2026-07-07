@@ -322,6 +322,17 @@ class Board {
         }
       }
       if (this.state === 'flight') {
+        // magnetisches Einsaugen naher Energie-Kristalle (Juice)
+        for (const st of this.stars) {
+          if (st.got) continue;
+          const d2 = dist2(this.orb.x, this.orb.y, st.x, st.y);
+          if (d2 < 5800 && d2 > 1) {
+            const d = Math.sqrt(d2);
+            const pull = (1 - d / 76) * 340 * realDt;
+            st.x += (this.orb.x - st.x) / d * pull;
+            st.y += (this.orb.y - st.y) / d * pull;
+          }
+        }
         if (this.orb.y < W.PLAY_TOP - W.CORRIDOR || this.orb.y > W.PLAY_BOT + W.CORRIDOR) this._crash();
         else if (this.flightTime > W.MAX_FLIGHT) this._crash();
       }
@@ -514,20 +525,29 @@ class Board {
   }
 
   _drawEnergyStar(ctx, sx, sy, scale, tw) {
-    const s = (7 + Math.sin(this.time * 4 + tw) * 1.5) * scale;
+    const pulse = 0.85 + 0.15 * Math.sin(this.time * 5 + tw);
+    const s = 11 * scale * pulse;
     ctx.save();
     ctx.translate(sx, sy);
-    ctx.rotate(this.time * 1.5 + tw);
     ctx.globalCompositeOperation = 'lighter';
-    ctx.shadowColor = '#ffe9a8'; ctx.shadowBlur = 14 * scale;
-    ctx.fillStyle = '#ffe37a';
+    // weicher Glow-Hof
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, s * 2.4);
+    g.addColorStop(0, 'rgba(255,232,150,0.65)');
+    g.addColorStop(0.5, 'rgba(255,200,80,0.22)');
+    g.addColorStop(1, 'rgba(255,200,80,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(0, 0, s * 2.4, 0, TAU); ctx.fill();
+    // Kristall (facettierter Diamant), langsam rotierend
+    ctx.rotate(this.time * 1.1 + tw);
+    ctx.fillStyle = '#fff6cf';
     ctx.beginPath();
-    for (let i = 0; i < 4; i++) {
-      const a = i / 4 * TAU;
-      ctx.lineTo(Math.cos(a) * s, Math.sin(a) * s);
-      ctx.lineTo(Math.cos(a + TAU / 8) * s * 0.42, Math.sin(a + TAU / 8) * s * 0.42);
-    }
+    ctx.moveTo(0, -s); ctx.lineTo(s * 0.6, -s * 0.2); ctx.lineTo(s * 0.42, s); ctx.lineTo(-s * 0.42, s); ctx.lineTo(-s * 0.6, -s * 0.2);
     ctx.closePath(); ctx.fill();
+    // Facetten-Schattierung
+    ctx.fillStyle = 'rgba(255,205,90,0.85)';
+    ctx.beginPath(); ctx.moveTo(0, -s); ctx.lineTo(s * 0.6, -s * 0.2); ctx.lineTo(0, s * 0.1); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(255,225,120,0.6)';
+    ctx.beginPath(); ctx.moveTo(0, -s); ctx.lineTo(-s * 0.6, -s * 0.2); ctx.lineTo(0, s * 0.1); ctx.closePath(); ctx.fill();
     ctx.restore();
   }
 
